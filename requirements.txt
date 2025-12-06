@@ -12,7 +12,7 @@ requests==2.31.0
 SQLAlchemy==2.0.23
 alembic==1.13.1
 PyMySQL==1.1.0
-cryptography==41.0.7
+cryptography==44.0.1
 
 # Async
 asyncio==3.4.3
