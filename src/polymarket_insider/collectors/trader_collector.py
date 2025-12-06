@@ -126,12 +126,17 @@ class TraderCollector:
 
     def _create_position(self, trader_id: int, data: Dict[str, Any]) -> Position:
         """Create a new position from API data"""
+        size_value = float(data.get("size", 0))
+        initial_value = float(data.get("initialValue", 0))
+
         return Position(
             trader_id=trader_id,
             market_id=data.get("condition_id"),
             outcome=data.get("outcome"),
-            size=float(data.get("size", 0)),
-            initial_value=float(data.get("initialValue", 0)),
+            size=size_value,
+            shares=size_value,  # Keep both in sync
+            initial_value=initial_value,
+            invested_amount=initial_value,  # Keep both in sync
             current_value=float(data.get("currentValue", 0)),
             avg_entry_price=float(data.get("avgPrice", 0)),
             realized_pnl=float(data.get("realizedPnl", 0)),
@@ -140,7 +145,10 @@ class TraderCollector:
 
     def _update_position(self, position: Position, data: Dict[str, Any]) -> None:
         """Update an existing position with new data"""
-        position.size = float(data.get("size", position.size))
+        size_value = float(data.get("size", position.size))
+
+        position.size = size_value
+        position.shares = size_value  # Keep both in sync
         position.current_value = float(data.get("currentValue", position.current_value))
         position.avg_entry_price = float(data.get("avgPrice", position.avg_entry_price))
         position.realized_pnl = float(data.get("realizedPnl", position.realized_pnl))
