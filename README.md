@@ -188,10 +188,27 @@ MAX_TRADERS_TO_TRACK=1000
 python3 -m polymarket_insider init
 ```
 
+This command will:
+1. **Check database connection** - Verifies MySQL is accessible on localhost:3306
+2. **Create tables** - Runs all SQLAlchemy models to create database schema:
+   - `traders` - Trader profiles and statistics
+   - `markets` - Polymarket markets data
+   - `positions` - Current trader positions
+   - `position_history` - Historical position snapshots
+   - `bets` - Individual bet/trade records
+   - `trader_scores` - Insider analysis scores (Phase 2)
+3. **Display configuration** - Shows current settings (database, API, collection interval)
+4. **Confirm success** - Displays completion message
+
 ### Check system status
 ```bash
 python3 -m polymarket_insider status
 ```
+
+Shows connection status for:
+- Database (MySQL connection)
+- API availability (future)
+- Running collectors (future)
 
 ### Collect market data
 ```bash
