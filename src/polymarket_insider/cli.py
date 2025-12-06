@@ -132,7 +132,7 @@ def collect():
 @click.option("--active-only", is_flag=True, help="Fetch only active markets")
 def markets(limit: int, active_only: bool):
     """Collect market data from Polymarket"""
-    from ..collectors.market_collector import collect_markets_task
+    from .collectors.market_collector import collect_markets_task
 
     console.print(f"[yellow]Collecting up to {limit} markets...[/yellow]")
 
@@ -148,7 +148,7 @@ def markets(limit: int, active_only: bool):
 @click.argument("addresses", nargs=-1)
 def traders(addresses):
     """Collect trader data for specific addresses"""
-    from ..collectors.trader_collector import collect_traders_task
+    from .collectors.trader_collector import collect_traders_task
 
     if not addresses:
         console.print("[red]Error: Please provide at least one address[/red]")
