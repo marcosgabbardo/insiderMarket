@@ -118,7 +118,6 @@ This project integrates with Polymarket APIs to collect, catalog, and analyze tr
 - **ORM**: SQLAlchemy
 - **Migrations**: Alembic
 - **Async**: asyncio / aiohttp
-- **Containerization**: Docker + Docker Compose
 - **Scheduling**: APScheduler / Celery
 - **Testing**: pytest
 - **Environment**: python-dotenv
@@ -141,29 +140,37 @@ pip3 install -r requirements.txt
 
 # Configure environment variables
 cp .env.example .env
-# Edit .env with your settings
+# Edit .env with your MySQL credentials
 
-# Start database (Docker)
-docker-compose up -d mysql
+# Create database in MySQL
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS polymarket_insider;"
 
 # Run migrations
 alembic upgrade head
 
-# Start the application
+# Initialize the application
 python3 -m polymarket_insider init
 ```
 
 ## ⚙️ Configuration
 
+### Prerequisites
+
+- Python 3.11+
+- MySQL 8.0+ running on localhost:3306
+- pip3
+
+### Environment Setup
+
 Create a `.env` file based on `.env.example`:
 
 ```env
-# Database
+# Database (Local MySQL)
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=polymarket_insider
 DB_USER=root
-DB_PASSWORD=your_password
+DB_PASSWORD=your_mysql_password
 
 # Polymarket API
 POLYMARKET_API_URL=https://gamma-api.polymarket.com
@@ -244,7 +251,6 @@ Complete documentation: https://docs.polymarket.com
 - [x] MySQL schema implementation
 - [x] Polymarket API client
 - [x] Data collection system
-- [x] Docker setup
 - [x] CLI interface
 - [ ] Unit tests
 - [ ] Phase 2: Detection algorithms
