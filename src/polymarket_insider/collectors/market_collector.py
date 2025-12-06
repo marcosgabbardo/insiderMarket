@@ -53,6 +53,15 @@ class MarketCollector:
             collected = 0
             for market_data in markets_data:
                 try:
+                    # Skip closed markets when active_only is True
+                    if active_only and market_data.get("closed", False):
+                        logger.debug(
+                            "Skipping closed market",
+                            market_id=market_data.get("id"),
+                            question=market_data.get("question", "")[:50],
+                        )
+                        continue
+
                     self._store_market(market_data)
                     collected += 1
                 except Exception as e:

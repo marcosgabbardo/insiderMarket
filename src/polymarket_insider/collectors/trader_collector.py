@@ -47,8 +47,19 @@ class TraderCollector:
                 logger.info(f"Created new trader", address=address)
 
             # Collect positions
-            positions_data = self.api.get_positions(address)
-            logger.info(f"Found {len(positions_data)} positions", address=address)
+            logger.info(f"Fetching positions", address=address)
+            try:
+                positions_data = self.api.get_positions(address)
+                logger.info(f"Found {len(positions_data)} positions", address=address)
+                # TODO: Store positions data (will be implemented in next phase)
+            except Exception as e:
+                # 404 means trader has no positions, which is valid
+                if "404" in str(e):
+                    logger.info(f"No positions found for trader (404)", address=address)
+                    positions_data = []
+                else:
+                    # Re-raise other errors
+                    raise
 
             # Update trader stats will be implemented later
 
