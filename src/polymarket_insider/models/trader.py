@@ -17,6 +17,7 @@ class Trader(Base, TimestampMixin):
     # Profile information
     username = Column(String(255), nullable=True)
     ens_name = Column(String(255), nullable=True)
+    trader_url = Column(String(500), nullable=True)  # Full Polymarket profile URL
 
     # Statistics
     total_volume = Column(Float, default=0.0)
