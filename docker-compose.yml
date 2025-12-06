@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: polymarket_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-polymarket_insider}
+      MYSQL_USER: ${DB_USER:-polymarket}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - polymarket_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: polymarket_app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-polymarket_insider}
+      - DB_USER=${DB_USER:-polymarket}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - POLYMARKET_API_URL=${POLYMARKET_API_URL:-https://gamma-api.polymarket.com}
+      - POLYMARKET_CLOB_API_URL=${POLYMARKET_CLOB_API_URL:-https://clob.polymarket.com}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    networks:
+      - polymarket_network
+    command: python -m polymarket_insider init
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  polymarket_network:
+    driver: bridge
