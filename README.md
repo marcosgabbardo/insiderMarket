@@ -1,37 +1,37 @@
 # Polymarket Insider Trading Tracker
 
-Sistema de análise e rastreamento de traders no Polymarket para identificação de padrões de insider trading e replicação automática de posições.
+Analysis and tracking system for Polymarket traders to identify insider trading patterns and enable automated position replication.
 
-## 📋 Visão Geral
+## 📋 Overview
 
-Este projeto integra-se com as APIs do Polymarket para coletar, catalogar e analisar dados de traders e mercados, identificando padrões de insider trading e permitindo copy trading automatizado em tempo quase real.
+This project integrates with Polymarket APIs to collect, catalog, and analyze trader and market data, identifying insider trading patterns and enabling automated copy trading in near real-time.
 
-## 🎯 Objetivos
+## 🎯 Objectives
 
 ### Phase 1 - Base Infrastructure ✅
-- **Setup inicial do projeto**
-- **Configuração de banco de dados MySQL**
-- **Integração com Polymarket API**
-- **Sistema de coleta de dados**
-  - Informações de traders
-  - Dados de mercados
-  - Posições atuais e históricas
-  - Histórico completo de apostas
-- **Armazenamento estruturado**
+- **Initial project setup**
+- **MySQL database configuration**
+- **Polymarket API integration**
+- **Data collection system**
+  - Trader information
+  - Market data
+  - Current and historical positions
+  - Complete bet history
+- **Structured storage**
 
 ### Phase 2 - Insider Analysis 🔄
-- **Algoritmos de detecção de padrões**
-- **Sistema de pontuação de traders**
-- **Identificação de movimentos antecipados**
-- **Dashboard de análise**
+- **Pattern detection algorithms**
+- **Trader scoring system**
+- **Early movement identification**
+- **Analysis dashboard**
 
 ### Phase 3 - Copy Trading 🔄
-- **Integração com wallet Polymarket**
-- **Sistema de replicação automatizada**
-- **Gestão de risco**
-- **Notificações em tempo real**
+- **Polymarket wallet integration**
+- **Automated replication system**
+- **Risk management**
+- **Real-time notifications**
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -51,12 +51,12 @@ Este projeto integra-se com as APIs do Polymarket para coletar, catalogar e anal
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    MySQL Database                           │
-│  • traders          (perfis e estatísticas)                 │
-│  • markets          (mercados e status)                     │
-│  • positions        (posições atuais)                       │
-│  • position_history (histórico de posições)                 │
-│  • bets             (todas as apostas)                      │
-│  • trader_scores    (pontuação insider analysis)            │
+│  • traders          (profiles and statistics)               │
+│  • markets          (markets and status)                    │
+│  • positions        (current positions)                     │
+│  • position_history (position history)                      │
+│  • bets             (all bets)                              │
+│  • trader_scores    (insider analysis scores)               │
 └────────────────────┬────────────────────────────────────────┘
                      │
                      ▼
@@ -76,41 +76,41 @@ Este projeto integra-se com as APIs do Polymarket para coletar, catalogar e anal
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🗄️ Schema do Banco de Dados
+## 🗄️ Database Schema
 
 ### Traders
-- Informações de perfil
-- Estatísticas de performance
-- Timestamp de criação/atualização
+- Profile information
+- Performance statistics
+- Creation/update timestamps
 
 ### Markets
-- Dados do mercado
-- Status (ativo, resolvido, cancelado)
-- Volumes e liquidez
+- Market data
+- Status (active, resolved, canceled)
+- Volume and liquidity
 - Timestamps
 
 ### Positions
-- Posições atuais dos traders
-- Valores investidos
-- Shares detidas
-- Mercado relacionado
+- Current trader positions
+- Invested amounts
+- Shares held
+- Related market
 
 ### Position History
-- Histórico completo de mudanças de posição
-- Snapshot temporal
-- Tracking de entradas/saídas
+- Complete position change history
+- Temporal snapshots
+- Entry/exit tracking
 
 ### Bets
-- Todas as apostas individuais
-- Valores, odds, timestamps
-- Resultados
+- All individual bets
+- Values, odds, timestamps
+- Results
 
 ### Trader Scores (Phase 2)
-- Pontuação de insider trading
-- Métricas de performance
-- Padrões identificados
+- Insider trading score
+- Performance metrics
+- Identified patterns
 
-## 🚀 Tecnologias
+## 🚀 Technologies
 
 - **Runtime**: Python 3.11+
 - **Database**: MySQL 8.0+
@@ -118,44 +118,44 @@ Este projeto integra-se com as APIs do Polymarket para coletar, catalogar e anal
 - **ORM**: SQLAlchemy
 - **Migrations**: Alembic
 - **Async**: asyncio / aiohttp
-- **Containerização**: Docker + Docker Compose
-- **Agendamento**: APScheduler / Celery
+- **Containerization**: Docker + Docker Compose
+- **Scheduling**: APScheduler / Celery
 - **Testing**: pytest
 - **Environment**: python-dotenv
 
-## 📦 Instalação
+## 📦 Installation
 
 ```bash
-# Clone o repositório
+# Clone the repository
 git clone <repository-url>
 cd insiderMarket
 
-# Crie ambiente virtual
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
-# ou
+# or
 venv\Scripts\activate  # Windows
 
-# Instale dependências
+# Install dependencies
 pip install -r requirements.txt
 
-# Configure variáveis de ambiente
+# Configure environment variables
 cp .env.example .env
-# Edite .env com suas configurações
+# Edit .env with your settings
 
-# Inicie o banco de dados (Docker)
+# Start database (Docker)
 docker-compose up -d mysql
 
-# Execute migrations
+# Run migrations
 alembic upgrade head
 
-# Inicie a aplicação
-python main.py
+# Start the application
+python -m polymarket_insider init
 ```
 
-## ⚙️ Configuração
+## ⚙️ Configuration
 
-Crie um arquivo `.env` baseado em `.env.example`:
+Create a `.env` file based on `.env.example`:
 
 ```env
 # Database
@@ -174,88 +174,94 @@ COLLECTION_INTERVAL_MINUTES=5
 MAX_TRADERS_TO_TRACK=1000
 ```
 
-## 🔄 Uso
+## 🔄 Usage
 
-### Coletar dados de mercados
+### Initialize database
 ```bash
-python -m src.collectors.markets
+python -m polymarket_insider init
 ```
 
-### Rastrear traders específicos
+### Check system status
 ```bash
-python -m src.collectors.traders --addresses <address1>,<address2>
+python -m polymarket_insider status
 ```
 
-### Atualizar posições históricas
+### Collect market data
 ```bash
-python -m src.collectors.history
+python -m polymarket_insider collect markets --limit 100 --active-only
 ```
 
-### Executar análise de insiders (Phase 2)
+### Track specific traders
 ```bash
-python -m src.analysis.insider_detection
+python -m polymarket_insider collect traders <address1> <address2> <address3>
 ```
 
-## 📊 Endpoints da API Polymarket
+### Run insider analysis (Phase 2)
+```bash
+python -m polymarket_insider analyze insiders
+```
 
-### Principais endpoints utilizados:
-- `GET /markets` - Lista de mercados
-- `GET /markets/:id` - Detalhes de mercado específico
-- `GET /markets/:id/positions` - Posições em um mercado
-- `GET /positions/:address` - Posições de um trader
-- `GET /trades` - Histórico de trades
+## 📊 Polymarket API Endpoints
 
-Documentação completa: https://docs.polymarket.com
+### Main endpoints used:
+- `GET /markets` - Market list
+- `GET /markets/:id` - Specific market details
+- `GET /markets/:id/positions` - Positions in a market
+- `GET /positions/:address` - Trader positions
+- `GET /trades` - Trade history
 
-## 🔍 Phase 2 - Insider Detection (Planejado)
+Complete documentation: https://docs.polymarket.com
 
-### Métricas de análise:
-- **Early Entry Score**: Traders que entram antes de movimentos significativos
-- **Timing Accuracy**: Precisão de timing em relação a eventos
-- **Volume Pattern**: Padrões de volume anormais
-- **Win Rate**: Taxa de acerto em mercados específicos
-- **Correlation Analysis**: Correlação entre traders suspeitos
+## 🔍 Phase 2 - Insider Detection (Planned)
 
-### Algoritmos:
-1. Detecção de clusters temporais
-2. Análise de ordem de entrada
-3. Padrões de volume anormal
+### Analysis metrics:
+- **Early Entry Score**: Traders who enter before significant movements
+- **Timing Accuracy**: Timing precision relative to events
+- **Volume Pattern**: Abnormal volume patterns
+- **Win Rate**: Success rate in specific markets
+- **Correlation Analysis**: Correlation between suspicious traders
+
+### Algorithms:
+1. Temporal cluster detection
+2. Entry order analysis
+3. Abnormal volume patterns
 4. Cross-market correlation
 
-## 🎯 Phase 3 - Copy Trading (Planejado)
+## 🎯 Phase 3 - Copy Trading (Planned)
 
 ### Features:
-- Monitoramento em tempo real de traders top-scored
-- Replicação automática de posições
-- Gestão de risco configurable
-- Notificações via Telegram/Discord
-- Stop-loss automático
+- Real-time monitoring of top-scored traders
+- Automatic position replication
+- Configurable risk management
+- Telegram/Discord notifications
+- Automatic stop-loss
 - Portfolio balancing
 
 ## 📈 Roadmap
 
-- [x] Definição de arquitetura
-- [x] Setup inicial do projeto
-- [ ] Implementação do schema MySQL
-- [ ] Cliente API Polymarket
-- [ ] Sistema de coleta de dados
-- [ ] Testes unitários básicos
-- [ ] Docker setup completo
-- [ ] Phase 2: Algoritmos de detecção
-- [ ] Phase 2: Dashboard de análise
+- [x] Architecture definition
+- [x] Initial project setup
+- [x] MySQL schema implementation
+- [x] Polymarket API client
+- [x] Data collection system
+- [x] Docker setup
+- [x] CLI interface
+- [ ] Unit tests
+- [ ] Phase 2: Detection algorithms
+- [ ] Phase 2: Analysis dashboard
 - [ ] Phase 3: Wallet integration
 - [ ] Phase 3: Copy trading engine
 
-## 🤝 Contribuição
+## 🤝 Contributing
 
-Este é um projeto privado. Para contribuir, entre em contato com o administrador.
+This is a private project. To contribute, please contact the administrator.
 
 ## ⚠️ Disclaimer
 
-Este software é fornecido para fins educacionais e de pesquisa. O uso de estratégias de copy trading envolve riscos financeiros significativos. Use por sua própria conta e risco.
+This software is provided for educational and research purposes only. Using copy trading strategies involves significant financial risks. Use at your own risk.
 
-**IMPORTANTE**: A identificação de "insider trading" é baseada em análise estatística e padrões, não constituindo prova legal de atividade ilícita.
+**IMPORTANT**: The identification of "insider trading" is based on statistical analysis and patterns, and does not constitute legal proof of illicit activity.
 
-## 📄 Licença
+## 📄 License
 
-Proprietary - Todos os direitos reservados
+Proprietary - All rights reserved
