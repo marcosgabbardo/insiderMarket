@@ -131,13 +131,13 @@ git clone https://github.com/marcosgabbardo/insiderMarket.git
 cd insiderMarket
 
 # Create virtual environment
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # Linux/Mac
 # or
 venv\Scripts\activate  # Windows
 
 # Install dependencies
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
 # Configure environment variables
 cp .env.example .env
@@ -150,7 +150,7 @@ docker-compose up -d mysql
 alembic upgrade head
 
 # Start the application
-python -m polymarket_insider init
+python3 -m polymarket_insider init
 ```
 
 ## ⚙️ Configuration
@@ -178,27 +178,27 @@ MAX_TRADERS_TO_TRACK=1000
 
 ### Initialize database
 ```bash
-python -m polymarket_insider init
+python3 -m polymarket_insider init
 ```
 
 ### Check system status
 ```bash
-python -m polymarket_insider status
+python3 -m polymarket_insider status
 ```
 
 ### Collect market data
 ```bash
-python -m polymarket_insider collect markets --limit 100 --active-only
+python3 -m polymarket_insider collect markets --limit 100 --active-only
 ```
 
 ### Track specific traders
 ```bash
-python -m polymarket_insider collect traders <address1> <address2> <address3>
+python3 -m polymarket_insider collect traders <address1> <address2> <address3>
 ```
 
 ### Run insider analysis (Phase 2)
 ```bash
-python -m polymarket_insider analyze insiders
+python3 -m polymarket_insider analyze insiders
 ```
 
 ## 📊 Polymarket API Endpoints
