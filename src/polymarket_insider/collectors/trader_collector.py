@@ -495,6 +495,11 @@ class TraderCollector:
             timestamp=timestamp,
             activity_date=activity_date,
             realized_pnl=float(data.get("realizedPnl", 0)) if data.get("realizedPnl") else None,
+<<<<<<< claude/fix-trader-table-data-01P5XwvmbLLyUcoWs7MdPr5o
+            metadata=json.dumps(data) if data else None,  # Store full data for reference
+        )
+
+=======
             activity_metadata=json.dumps(data) if data else None,  # Store full data for reference
         )
 
@@ -646,6 +651,7 @@ class TraderCollector:
             logger.error(f"Failed to collect markets from positions and activities", error=str(e))
             # Don't rollback here - trader data was already committed
 
+>>>>>>> main
     def _collect_trader_markets_from_positions(self, trader: Trader) -> None:
         """
         Collect markets based on trader's positions (more reliable than condition_id lookup)

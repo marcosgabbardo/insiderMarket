@@ -37,7 +37,7 @@ def upgrade() -> None:
         sa.Column('timestamp', sa.Integer(), nullable=True),
         sa.Column('activity_date', sa.String(length=50), nullable=True),
         sa.Column('realized_pnl', sa.Float(), nullable=True),
-        sa.Column('activity_metadata', sa.Text(), nullable=True),
+        sa.Column('metadata', sa.Text(), nullable=True),
         sa.Column('created_at', sa.String(length=50), nullable=True),
         sa.Column('updated_at', sa.String(length=50), nullable=True),
         sa.PrimaryKeyConstraint('id'),
