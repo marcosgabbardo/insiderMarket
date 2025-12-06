@@ -17,6 +17,7 @@ class PolymarketAPIClient:
     def __init__(self):
         self.base_url = settings.polymarket.api_url
         self.clob_url = settings.polymarket.clob_api_url
+        self.data_api_url = "https://data-api.polymarket.com"
         self.api_key = settings.polymarket.api_key
         self.client = httpx.Client(timeout=30.0)
 
@@ -180,6 +181,93 @@ class PolymarketAPIClient:
         return self._make_request(
             "GET", f"/ticker?token_id={token_id}", base_url=self.clob_url
         )
+
+    # Data API endpoints (comprehensive trader data)
+
+    def get_user_positions_detailed(
+        self,
+        address: str,
+        limit: int = 100,
+        size_threshold: float = 1.0,
+        sort_by: str = "CASHPNL",
+    ) -> List[Dict[str, Any]]:
+        """
+        Get detailed positions for a user from Data API
+
+        Args:
+            address: Ethereum address
+            limit: Max results (default: 100, max: 500)
+            size_threshold: Minimum position size (default: 1.0)
+            sort_by: Sort field (TOKENS, CURRENT, INITIAL, CASHPNL, PERCENTPNL, etc)
+
+        Returns:
+            List of detailed position data
+        """
+        params = {
+            "user": address,
+            "limit": limit,
+            "sizeThreshold": size_threshold,
+            "sortBy": sort_by,
+            "sortDirection": "DESC",
+        }
+        logger.info(f"Fetching detailed positions from Data API", address=address)
+        return self._make_request("GET", "/positions", base_url=self.data_api_url, params=params)
+
+    def get_user_trades(
+        self, address: str, limit: int = 500, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """
+        Get trades for a specific user from Data API
+
+        Args:
+            address: Ethereum address
+            limit: Max trades (default: 500)
+            offset: Pagination offset
+
+        Returns:
+            List of trade data
+        """
+        params = {"user": address, "limit": limit, "offset": offset, "takerOnly": True}
+        logger.info(f"Fetching trades from Data API", address=address, limit=limit)
+        return self._make_request("GET", "/trades", base_url=self.data_api_url, params=params)
+
+    def get_user_activity_detailed(
+        self,
+        address: str,
+        limit: int = 500,
+        activity_type: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get detailed activity for a user from Data API
+
+        Args:
+            address: Ethereum address
+            limit: Max results (default: 500)
+            activity_type: TRADE, SPLIT, MERGE, REDEEM, REWARD, CONVERSION
+
+        Returns:
+            List of activity data
+        """
+        params = {"user": address, "limit": limit, "sortBy": "TIMESTAMP", "sortDirection": "DESC"}
+        if activity_type:
+            params["type"] = activity_type
+
+        logger.info(f"Fetching activity from Data API", address=address)
+        return self._make_request("GET", "/activity", base_url=self.data_api_url, params=params)
+
+    def get_user_portfolio_value(self, address: str) -> Dict[str, Any]:
+        """
+        Get total portfolio value for a user from Data API
+
+        Args:
+            address: Ethereum address
+
+        Returns:
+            Dict with user address and total value
+        """
+        params = {"user": address}
+        logger.info(f"Fetching portfolio value from Data API", address=address)
+        return self._make_request("GET", "/value", base_url=self.data_api_url, params=params)
 
     def close(self):
         """Close the HTTP client"""
