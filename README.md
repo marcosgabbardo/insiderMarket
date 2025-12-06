@@ -127,7 +127,7 @@ This project integrates with Polymarket APIs to collect, catalog, and analyze tr
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/marcosgabbardo/insiderMarket.git
 cd insiderMarket
 
 # Create virtual environment
