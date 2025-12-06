@@ -215,9 +215,32 @@ Shows connection status for:
 python3 -m polymarket_insider collect markets --limit 100 --active-only
 ```
 
+This command will:
+1. Fetch up to 100 active markets from Polymarket API
+2. Save/update market data in MySQL `markets` table
+3. Store: question, category, volume, liquidity, outcomes, prices
+4. Display count of successfully collected markets
+
+**Verify data:**
+```bash
+mysql -u root -p polymarket_insider -e "SELECT COUNT(*) FROM markets;"
+mysql -u root -p polymarket_insider -e "SELECT market_id, question, volume FROM markets LIMIT 5;"
+```
+
 ### Track specific traders
 ```bash
 python3 -m polymarket_insider collect traders <address1> <address2> <address3>
+```
+
+This command will:
+1. Fetch trader positions from Polymarket API
+2. Save trader profiles in MySQL `traders` table
+3. Store position data in `positions` table
+4. Display count of successfully tracked traders
+
+**Example:**
+```bash
+python3 -m polymarket_insider collect traders 0x1234... 0x5678...
 ```
 
 ### Run insider analysis (Phase 2)
@@ -225,16 +248,56 @@ python3 -m polymarket_insider collect traders <address1> <address2> <address3>
 python3 -m polymarket_insider analyze insiders
 ```
 
-## 📊 Polymarket API Endpoints
+This feature is planned for Phase 2.
 
-### Main endpoints used:
-- `GET /markets` - Market list
-- `GET /markets/:id` - Specific market details
-- `GET /markets/:id/positions` - Positions in a market
-- `GET /positions/:address` - Trader positions
-- `GET /trades` - Trade history
+## 🔍 Verifying Collected Data
 
-Complete documentation: https://docs.polymarket.com
+After collecting data, you can verify it was saved correctly:
+
+### Check markets table
+```bash
+# Count total markets
+mysql -u root -p polymarket_insider -e "SELECT COUNT(*) as total_markets FROM markets;"
+
+# View recent markets with details
+mysql -u root -p polymarket_insider -e "SELECT market_id, question, volume, active FROM markets ORDER BY created_at DESC LIMIT 10;"
+
+# Check active markets only
+mysql -u root -p polymarket_insider -e "SELECT COUNT(*) FROM markets WHERE active = 1;"
+```
+
+### Check traders table
+```bash
+# Count total traders
+mysql -u root -p polymarket_insider -e "SELECT COUNT(*) as total_traders FROM traders;"
+
+# View trader statistics
+mysql -u root -p polymarket_insider -e "SELECT address, total_volume, total_trades FROM traders ORDER BY total_volume DESC LIMIT 10;"
+```
+
+### Check positions table
+```bash
+# View current positions
+mysql -u root -p polymarket_insider -e "SELECT * FROM positions LIMIT 10;"
+```
+
+## 📊 Polymarket API Integration
+
+The application connects to real Polymarket APIs to fetch live data:
+
+### Gamma API (https://gamma-api.polymarket.com)
+- **`GET /markets`** - Fetches active and historical markets ✅ Implemented
+- **`GET /markets/:id`** - Retrieves specific market details
+- **`GET /positions`** - Gets trader positions (by user address)
+- **`GET /trades`** - Fetches trade history
+
+### CLOB API (https://clob.polymarket.com)
+- **`GET /book`** - Order book data (token_id)
+- **`GET /ticker`** - Current ticker prices (token_id)
+
+**All API calls are real HTTP requests** - no mocks or simulations.
+
+Complete API documentation: https://docs.polymarket.com
 
 ## 🔍 Phase 2 - Insider Detection (Planned)
 
