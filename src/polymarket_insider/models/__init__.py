@@ -5,6 +5,7 @@ from .base import Base, TimestampMixin
 from .trader import Trader
 from .market import Market
 from .position import Position, PositionHistory
+from .activity import Activity
 from .bet import Bet
 from .trader_score import TraderScore
 
@@ -15,6 +16,7 @@ __all__ = [
     "Market",
     "Position",
     "PositionHistory",
+    "Activity",
     "Bet",
     "TraderScore",
 ]
