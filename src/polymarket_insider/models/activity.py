@@ -55,7 +55,7 @@ class Activity(Base, TimestampMixin):
     realized_pnl = Column(Float, nullable=True)
 
     # Additional metadata (JSON)
-    metadata = Column(Text, nullable=True)  # JSON string for extra data
+    activity_metadata = Column(Text, nullable=True)  # JSON string for extra data
 
     # Relationships
     trader = relationship("Trader", backref="activities")

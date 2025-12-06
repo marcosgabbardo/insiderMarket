@@ -375,7 +375,7 @@ class TraderCollector:
             timestamp=timestamp,
             activity_date=activity_date,
             realized_pnl=float(data.get("realizedPnl", 0)) if data.get("realizedPnl") else None,
-            metadata=json.dumps(data) if data else None,  # Store full data for reference
+            activity_metadata=json.dumps(data) if data else None,  # Store full data for reference
         )
 
     def _collect_trader_markets_from_positions(self, trader: Trader) -> None:
