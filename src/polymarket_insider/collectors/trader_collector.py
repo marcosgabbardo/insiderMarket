@@ -5,7 +5,7 @@ from typing import List, Set, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 from ..api.client import PolymarketAPIClient
-from ..models import Trader, Position, Market
+from ..models import Trader, Position, Market, Activity
 from ..core.logging import get_logger
 from ..core.database import get_db
 
@@ -55,6 +55,7 @@ class TraderCollector:
             # Collect comprehensive data
             market_ids = self._collect_positions(trader)
             self._collect_trades_and_stats(trader)
+            self._collect_activities(trader, market_ids)
 
             # Note: Username is not available via public API
             # It would need to be scraped from the Polymarket website
@@ -64,9 +65,10 @@ class TraderCollector:
             self.db.commit()
 
             # Collect markets that the trader is involved in
+            # Now using positions directly to get accurate market data
             if collect_markets and market_ids:
                 logger.info(f"Auto-collecting {len(market_ids)} markets for trader", address=address)
-                self._collect_trader_markets(market_ids)
+                self._collect_trader_markets_from_positions(trader)
 
             return trader
 
@@ -284,6 +286,160 @@ class TraderCollector:
         # Calculate average initial value across all positions
         total_initial_value = sum(p.initial_value or 0 for p in positions)
         trader.avg_position_size = total_initial_value / len(positions) if positions else None
+
+    def _collect_activities(self, trader: Trader, market_ids: Set[str]) -> None:
+        """
+        Collect all activities for a trader (trades, splits, merges, redeems, etc.)
+
+        Args:
+            trader: Trader model instance
+            market_ids: Set of market IDs from positions (for context)
+        """
+        address = trader.address
+
+        try:
+            # Fetch all activities using Data API
+            all_activities = []
+            limit = 500
+
+            # Try to get activities from Data API
+            try:
+                activities = self.api.get_user_activity_detailed(
+                    address=address,
+                    limit=limit
+                )
+                all_activities.extend(activities)
+                logger.info(f"Found {len(all_activities)} activities", address=address)
+            except Exception as e:
+                # If Data API fails, log and continue
+                logger.warning(f"Could not fetch activities from Data API", address=address, error=str(e))
+                return
+
+            if not all_activities:
+                logger.info(f"No activities found for trader", address=address)
+                return
+
+            # Store each activity
+            for activity_data in all_activities:
+                try:
+                    # Check if activity already exists by transaction hash
+                    tx_hash = activity_data.get("transactionHash") or activity_data.get("txHash")
+                    if tx_hash:
+                        existing = (
+                            self.db.query(Activity)
+                            .filter(
+                                Activity.trader_id == trader.id,
+                                Activity.transaction_hash == tx_hash,
+                            )
+                            .first()
+                        )
+                        if existing:
+                            continue
+
+                    # Create new activity
+                    activity = self._create_activity(trader.id, activity_data)
+                    self.db.add(activity)
+
+                except Exception as e:
+                    logger.warning(f"Failed to store activity", error=str(e))
+                    continue
+
+            logger.info(f"Stored activities for trader", address=address, count=len(all_activities))
+
+        except Exception as e:
+            logger.warning(f"Failed to collect activities", address=address, error=str(e))
+
+    def _create_activity(self, trader_id: int, data: Dict[str, Any]) -> Activity:
+        """Create an activity from API data"""
+        import json
+
+        timestamp = data.get("timestamp")
+        activity_date = None
+        if timestamp:
+            activity_date = datetime.fromtimestamp(timestamp).isoformat()
+
+        return Activity(
+            trader_id=trader_id,
+            market_id=data.get("conditionId") or data.get("condition_id"),
+            transaction_hash=data.get("transactionHash") or data.get("txHash"),
+            activity_type=data.get("type", "TRADE"),
+            outcome=data.get("outcome"),
+            side=data.get("side"),
+            shares_amount=float(data.get("sharesAmount", 0)) if data.get("sharesAmount") else None,
+            cash_amount=float(data.get("cashAmount", 0)) if data.get("cashAmount") else None,
+            price=float(data.get("price", 0)) if data.get("price") else None,
+            fee_amount=float(data.get("feeAmount", 0)) if data.get("feeAmount") else None,
+            asset_id=data.get("assetId") or data.get("asset_id"),
+            from_asset_id=data.get("fromAssetId") or data.get("from_asset_id"),
+            to_asset_id=data.get("toAssetId") or data.get("to_asset_id"),
+            timestamp=timestamp,
+            activity_date=activity_date,
+            realized_pnl=float(data.get("realizedPnl", 0)) if data.get("realizedPnl") else None,
+            metadata=json.dumps(data) if data else None,  # Store full data for reference
+        )
+
+    def _collect_trader_markets_from_positions(self, trader: Trader) -> None:
+        """
+        Collect markets based on trader's positions (more reliable than condition_id lookup)
+
+        Args:
+            trader: Trader model instance
+        """
+        from .market_collector import MarketCollector
+
+        try:
+            # Get all positions for this trader
+            positions = self.db.query(Position).filter(Position.trader_id == trader.id).all()
+
+            if not positions:
+                logger.info(f"No positions to collect markets from", trader_address=trader.address)
+                return
+
+            collector = MarketCollector(self.api, self.db)
+            collected_count = 0
+            unique_market_ids = set()
+
+            for position in positions:
+                market_id = position.market_id
+                if not market_id or market_id in unique_market_ids:
+                    continue
+
+                unique_market_ids.add(market_id)
+
+                try:
+                    # Check if market already exists by condition_id
+                    existing = self.db.query(Market).filter(Market.condition_id == market_id).first()
+                    if existing:
+                        logger.debug(f"Market already exists", condition_id=market_id)
+                        continue
+
+                    # Try to fetch market using condition_id
+                    # The Polymarket API sometimes accepts condition_id as market_id
+                    try:
+                        market_data = self.api.get_market(market_id)
+                        collector._store_market(market_data)
+                        collected_count += 1
+                        logger.debug(f"Collected market from position", condition_id=market_id)
+                    except Exception as api_error:
+                        logger.debug(
+                            f"Could not fetch market by condition_id from position",
+                            condition_id=market_id,
+                            error=str(api_error)
+                        )
+                        continue
+
+                except Exception as e:
+                    logger.warning(f"Failed to collect market from position", market_id=market_id, error=str(e))
+                    continue
+
+            if collected_count > 0:
+                self.db.commit()
+                logger.info(f"Auto-collected {collected_count} markets from {len(positions)} positions")
+            else:
+                logger.info(f"No new markets collected from positions")
+
+        except Exception as e:
+            logger.error(f"Failed to collect markets from positions", error=str(e))
 
     def _collect_trader_markets(self, market_ids: Set[str]) -> None:
         """
