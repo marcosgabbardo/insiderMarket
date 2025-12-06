@@ -553,6 +553,9 @@ class TraderCollector:
         """
         Collect markets from both positions and activities
 
+        Note: Some markets may fail with 422 error because condition_id != market_id.
+        This is expected and the system will continue collecting other markets.
+
         Args:
             trader: Trader model instance
         """
@@ -582,41 +585,66 @@ class TraderCollector:
             # Collect markets
             collector = MarketCollector(self.api, self.db)
             collected_count = 0
+            already_exists_count = 0
+            failed_422_count = 0
+            failed_other_count = 0
 
             for market_id in all_market_ids:
                 try:
                     # Check if market already exists by condition_id
                     existing = self.db.query(Market).filter(Market.condition_id == market_id).first()
                     if existing:
+                        already_exists_count += 1
                         logger.debug(f"Market already exists", condition_id=market_id)
                         continue
 
                     # Try to fetch market using condition_id
+                    # Note: condition_id may not always equal market_id in the API
                     try:
                         market_data = self.api.get_market(market_id)
                         collector._store_market(market_data)
                         collected_count += 1
                         logger.debug(f"Collected market", condition_id=market_id)
                     except Exception as api_error:
-                        logger.debug(
-                            f"Could not fetch market by condition_id",
-                            condition_id=market_id,
-                            error=str(api_error)
-                        )
+                        error_str = str(api_error)
+                        # 422 means condition_id != market_id (expected for some markets)
+                        if "422" in error_str:
+                            failed_422_count += 1
+                            logger.debug(
+                                f"Market API returned 422 (condition_id likely != market_id)",
+                                condition_id=market_id
+                            )
+                        else:
+                            failed_other_count += 1
+                            logger.debug(
+                                f"Could not fetch market",
+                                condition_id=market_id,
+                                error=error_str
+                            )
                         continue
 
                 except Exception as e:
-                    logger.warning(f"Failed to collect market", market_id=market_id, error=str(e))
+                    failed_other_count += 1
+                    logger.warning(f"Failed to process market", market_id=market_id, error=str(e))
                     continue
 
-            if collected_count > 0:
-                self.db.commit()
-                logger.info(f"Auto-collected {collected_count} new markets", trader_address=trader.address)
-            else:
-                logger.info(f"No new markets to collect", trader_address=trader.address)
+            # Always commit to close the transaction cleanly
+            self.db.commit()
+
+            # Log summary
+            logger.info(
+                f"Market collection complete",
+                trader_address=trader.address,
+                total_markets=len(all_market_ids),
+                collected=collected_count,
+                already_existed=already_exists_count,
+                failed_422=failed_422_count,
+                failed_other=failed_other_count
+            )
 
         except Exception as e:
             logger.error(f"Failed to collect markets from positions and activities", error=str(e))
+            # Don't rollback here - trader data was already committed
 
     def _collect_trader_markets_from_positions(self, trader: Trader) -> None:
         """
