@@ -26,7 +26,51 @@ def cli():
 @cli.command()
 def init():
     """Initialize database and check configuration"""
+    import os
+    from pathlib import Path
+
     console.print("[bold blue]Initializing Polymarket Insider...[/bold blue]")
+
+    # Check if .env file exists
+    env_path = Path(".env")
+    if not env_path.exists():
+        console.print("\n[red]✗ .env file not found![/red]")
+        console.print("\n[yellow]Please create a .env file with your database credentials:[/yellow]")
+        console.print("\n1. Copy the example file:")
+        console.print("   [cyan]cp .env.example .env[/cyan]")
+        console.print("\n2. Edit .env and set your MySQL password:")
+        console.print("   [cyan]DB_PASSWORD=your_mysql_password[/cyan]")
+        console.print("\n3. Run this command again:")
+        console.print("   [cyan]python3 -m polymarket_insider init[/cyan]")
+        return
+
+    # Try to create database if it doesn't exist
+    console.print("\n[yellow]Checking/creating database...[/yellow]")
+    try:
+        from sqlalchemy import create_engine, text
+        # Connect to MySQL without specifying database
+        root_connection_string = f"mysql+pymysql://{settings.database.user}:{settings.database.password}@{settings.database.host}:{settings.database.port}/"
+        temp_engine = create_engine(root_connection_string)
+
+        with temp_engine.connect() as conn:
+            # Check if database exists
+            result = conn.execute(text(f"SHOW DATABASES LIKE '{settings.database.name}'"))
+            if result.fetchone() is None:
+                # Create database
+                conn.execute(text(f"CREATE DATABASE {settings.database.name}"))
+                conn.commit()
+                console.print(f"[green]✓[/green] Database '{settings.database.name}' created")
+            else:
+                console.print(f"[green]✓[/green] Database '{settings.database.name}' already exists")
+        temp_engine.dispose()
+    except Exception as e:
+        console.print(f"[red]✗[/red] Failed to create database: {e}")
+        console.print("\n[yellow]Common solutions:[/yellow]")
+        console.print("1. Check if MySQL is running: [cyan]sudo systemctl status mysql[/cyan]")
+        console.print("2. Verify your DB_PASSWORD in .env matches your MySQL root password")
+        console.print("3. Or set a password for MySQL root user:")
+        console.print("   [cyan]sudo mysql -e \"ALTER USER 'root'@'localhost' IDENTIFIED BY 'your_password';\"[/cyan]")
+        return
 
     # Check database connection
     console.print("\n[yellow]Checking database connection...[/yellow]")
