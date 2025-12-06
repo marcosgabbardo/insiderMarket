@@ -18,6 +18,7 @@ class DatabaseConfig(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     @property
@@ -45,6 +46,7 @@ class PolymarketConfig(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
 
@@ -58,6 +60,7 @@ class CollectionConfig(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
 
@@ -70,6 +73,7 @@ class LoggingConfig(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
 
@@ -82,6 +86,7 @@ class AppConfig(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
 
