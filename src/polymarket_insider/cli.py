@@ -88,22 +88,36 @@ def collect():
 @click.option("--active-only", is_flag=True, help="Fetch only active markets")
 def markets(limit: int, active_only: bool):
     """Collect market data from Polymarket"""
-    console.print(f"[yellow]Collecting {limit} markets...[/yellow]")
-    # Implementation will be in collectors module
-    console.print("[green]✓ Markets collected successfully[/green]")
+    from ..collectors.market_collector import collect_markets_task
+
+    console.print(f"[yellow]Collecting up to {limit} markets...[/yellow]")
+
+    try:
+        count = collect_markets_task(limit=limit, active_only=active_only)
+        console.print(f"[green]✓ Successfully collected {count} markets[/green]")
+    except Exception as e:
+        console.print(f"[red]✗ Failed to collect markets: {e}[/red]")
+        logger.error("Market collection failed", error=str(e))
 
 
 @collect.command()
 @click.argument("addresses", nargs=-1)
 def traders(addresses):
     """Collect trader data for specific addresses"""
+    from ..collectors.trader_collector import collect_traders_task
+
     if not addresses:
         console.print("[red]Error: Please provide at least one address[/red]")
         return
 
     console.print(f"[yellow]Collecting data for {len(addresses)} trader(s)...[/yellow]")
-    # Implementation will be in collectors module
-    console.print("[green]✓ Trader data collected successfully[/green]")
+
+    try:
+        count = collect_traders_task(list(addresses))
+        console.print(f"[green]✓ Successfully collected {count} trader(s)[/green]")
+    except Exception as e:
+        console.print(f"[red]✗ Failed to collect traders: {e}[/red]")
+        logger.error("Trader collection failed", error=str(e))
 
 
 @cli.group()

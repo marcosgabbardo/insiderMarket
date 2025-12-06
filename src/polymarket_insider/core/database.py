@@ -2,7 +2,7 @@
 Database connection and session management
 """
 from typing import Generator
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from .config import settings
 from .logging import get_logger
@@ -60,7 +60,8 @@ def check_db_connection() -> bool:
     """
     try:
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
+            conn.commit()
         logger.info("Database connection successful")
         return True
     except Exception as e:
