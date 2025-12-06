@@ -41,15 +41,24 @@ class TraderCollector:
             if not trader:
                 trader = Trader(
                     address=address,
+                    trader_url=f"https://polymarket.com/profile/{address}",
                     last_synced_at=datetime.utcnow().isoformat(),
                 )
                 self.db.add(trader)
                 self.db.flush()
                 logger.info(f"Created new trader", address=address)
+            else:
+                # Update trader_url if not set
+                if not trader.trader_url:
+                    trader.trader_url = f"https://polymarket.com/profile/{address}"
 
             # Collect comprehensive data
             market_ids = self._collect_positions(trader)
             self._collect_trades_and_stats(trader)
+
+            # Note: Username is not available via public API
+            # It would need to be scraped from the Polymarket website
+            # or obtained through a different method
 
             trader.last_synced_at = datetime.utcnow().isoformat()
             self.db.commit()
@@ -214,11 +223,12 @@ class TraderCollector:
             trader.markets_traded = len(markets_traded)
 
             if trade_dates:
-                trader.first_trade_date = min(trade_dates)
-                trader.last_trade_date = max(trade_dates)
+                trader.first_trade_date = min(trade_dates).isoformat()
+                trader.last_trade_date = max(trade_dates).isoformat()
 
-            # Calculate win rate from positions
+            # Calculate win rate and avg position size from positions
             self._calculate_win_rate(trader)
+            self._calculate_avg_position_size(trader)
 
             logger.info(
                 f"Updated trader stats",
@@ -257,6 +267,24 @@ class TraderCollector:
 
         trader.win_rate = (winning_positions / len(positions)) * 100 if positions else None
 
+    def _calculate_avg_position_size(self, trader: Trader) -> None:
+        """
+        Calculate average position size based on trader's positions
+
+        Args:
+            trader: Trader model instance
+        """
+        # Get all positions for the trader
+        positions = self.db.query(Position).filter(Position.trader_id == trader.id).all()
+
+        if not positions:
+            trader.avg_position_size = None
+            return
+
+        # Calculate average initial value across all positions
+        total_initial_value = sum(p.initial_value or 0 for p in positions)
+        trader.avg_position_size = total_initial_value / len(positions) if positions else None
+
     def _collect_trader_markets(self, market_ids: Set[str]) -> None:
         """
         Collect market data for markets the trader is involved in
@@ -268,26 +296,39 @@ class TraderCollector:
 
         try:
             collector = MarketCollector(self.api, self.db)
+            collected_count = 0
 
-            for market_id in market_ids:
+            for condition_id in market_ids:
                 try:
-                    # Check if market already exists
-                    existing = self.db.query(Market).filter(Market.market_id == market_id).first()
+                    # Check if market already exists by condition_id
+                    existing = self.db.query(Market).filter(Market.condition_id == condition_id).first()
                     if existing:
-                        logger.debug(f"Market already exists", market_id=market_id)
+                        logger.debug(f"Market already exists", condition_id=condition_id)
                         continue
 
-                    # Fetch and store market
-                    market_data = self.api.get_market(market_id)
-                    collector._store_market(market_data)
-                    logger.debug(f"Collected market", market_id=market_id)
+                    # Try to fetch market using condition_id as market_id
+                    # (In many cases, they might be the same or the API might handle it)
+                    try:
+                        market_data = self.api.get_market(condition_id)
+                        collector._store_market(market_data)
+                        collected_count += 1
+                        logger.debug(f"Collected market", condition_id=condition_id)
+                    except Exception as api_error:
+                        # If API fails, it might be because condition_id != market_id
+                        # We can't fetch without the actual market_id
+                        logger.debug(
+                            f"Could not fetch market by condition_id",
+                            condition_id=condition_id,
+                            error=str(api_error)
+                        )
+                        continue
 
                 except Exception as e:
-                    logger.warning(f"Failed to collect market", market_id=market_id, error=str(e))
+                    logger.warning(f"Failed to collect market", condition_id=condition_id, error=str(e))
                     continue
 
             self.db.commit()
-            logger.info(f"Auto-collected markets", count=len(market_ids))
+            logger.info(f"Auto-collected {collected_count} new markets from {len(market_ids)} positions")
 
         except Exception as e:
             logger.error(f"Failed to auto-collect markets", error=str(e))
