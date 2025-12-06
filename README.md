@@ -138,17 +138,14 @@ venv\Scripts\activate  # Windows
 # Install dependencies
 pip3 install -r requirements.txt
 
+# Install package in editable mode (required for CLI to work)
+pip3 install -e .
+
 # Configure environment variables
 cp .env.example .env
-# Edit .env with your MySQL credentials
+# Edit .env with your MySQL credentials and MySQL password
 
-# Create database in MySQL
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS polymarket_insider;"
-
-# Run migrations
-alembic upgrade head
-
-# Initialize the application
+# Initialize the application (this will create the database automatically)
 python3 -m polymarket_insider init
 ```
 
@@ -170,11 +167,11 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=polymarket_insider
 DB_USER=root
-DB_PASSWORD=your_mysql_password
+DB_PASSWORD=your_mysql_password  # IMPORTANT: Set your MySQL root password here
 
 # Polymarket API
 POLYMARKET_API_URL=https://gamma-api.polymarket.com
-POLYMARKET_API_KEY=your_api_key_if_needed
+POLYMARKET_API_KEY=  # Optional - only needed for authenticated endpoints
 
 # Collection Settings
 COLLECTION_INTERVAL_MINUTES=5
@@ -298,6 +295,31 @@ The application connects to real Polymarket APIs to fetch live data:
 **All API calls are real HTTP requests** - no mocks or simulations.
 
 Complete API documentation: https://docs.polymarket.com
+
+### API Authentication
+
+**Phase 1 (Current)**: Public read endpoints don't require authentication. You can leave `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, and `POLYMARKET_API_PASSPHRASE` empty in your `.env` file.
+
+**Phase 3 (Future - Copy Trading)**: For authenticated operations (placing orders, trading), Polymarket CLOB API requires three credentials:
+- `POLYMARKET_API_KEY` - API key for authentication
+- `POLYMARKET_API_SECRET` - Secret associated with the key
+- `POLYMARKET_API_PASSPHRASE` - Required for encryption
+
+These credentials are generated together using your wallet's private key through Polymarket's authentication system. They are created programmatically, not manually set by users.
+
+**How to generate credentials (for Phase 3)**:
+```python
+from py_clob_client.client import ClobClient
+from py_clob_client.clob_types import ApiCreds
+
+# Generate credentials using your private key
+client = ClobClient(host="https://clob.polymarket.com", key=YOUR_PRIVATE_KEY)
+creds: ApiCreds = client.create_or_derive_api_creds()
+
+# creds will contain: apiKey, apiSecret, apiPassphrase
+```
+
+For more information, see: [Polymarket Authentication Docs](https://docs.polymarket.com/developers/CLOB/authentication)
 
 ## 🔍 Phase 2 - Insider Detection (Planned)
 

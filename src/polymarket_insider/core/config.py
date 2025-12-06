@@ -36,7 +36,10 @@ class PolymarketConfig(BaseSettings):
         default="https://clob.polymarket.com",
         alias="POLYMARKET_CLOB_API_URL"
     )
+    # API credentials (optional for Phase 1, required for Phase 3 trading)
     api_key: Optional[str] = Field(default=None, alias="POLYMARKET_API_KEY")
+    api_secret: Optional[str] = Field(default=None, alias="POLYMARKET_API_SECRET")
+    api_passphrase: Optional[str] = Field(default=None, alias="POLYMARKET_API_PASSPHRASE")
 
     model_config = SettingsConfigDict(
         env_file=".env",
