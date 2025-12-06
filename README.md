@@ -1,37 +1,37 @@
 # Polymarket Insider Trading Tracker
 
-Sistema de análise e rastreamento de traders no Polymarket para identificação de padrões de insider trading e replicação automática de posições.
+Analysis and tracking system for Polymarket traders to identify insider trading patterns and enable automated position replication.
 
-## 📋 Visão Geral
+## 📋 Overview
 
-Este projeto integra-se com as APIs do Polymarket para coletar, catalogar e analisar dados de traders e mercados, identificando padrões de insider trading e permitindo copy trading automatizado em tempo quase real.
+This project integrates with Polymarket APIs to collect, catalog, and analyze trader and market data, identifying insider trading patterns and enabling automated copy trading in near real-time.
 
-## 🎯 Objetivos
+## 🎯 Objectives
 
 ### Phase 1 - Base Infrastructure ✅
-- **Setup inicial do projeto**
-- **Configuração de banco de dados MySQL**
-- **Integração com Polymarket API**
-- **Sistema de coleta de dados**
-  - Informações de traders
-  - Dados de mercados
-  - Posições atuais e históricas
-  - Histórico completo de apostas
-- **Armazenamento estruturado**
+- **Initial project setup**
+- **MySQL database configuration**
+- **Polymarket API integration**
+- **Data collection system**
+  - Trader information
+  - Market data
+  - Current and historical positions
+  - Complete bet history
+- **Structured storage**
 
 ### Phase 2 - Insider Analysis 🔄
-- **Algoritmos de detecção de padrões**
-- **Sistema de pontuação de traders**
-- **Identificação de movimentos antecipados**
-- **Dashboard de análise**
+- **Pattern detection algorithms**
+- **Trader scoring system**
+- **Early movement identification**
+- **Analysis dashboard**
 
 ### Phase 3 - Copy Trading 🔄
-- **Integração com wallet Polymarket**
-- **Sistema de replicação automatizada**
-- **Gestão de risco**
-- **Notificações em tempo real**
+- **Polymarket wallet integration**
+- **Automated replication system**
+- **Risk management**
+- **Real-time notifications**
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -51,12 +51,12 @@ Este projeto integra-se com as APIs do Polymarket para coletar, catalogar e anal
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    MySQL Database                           │
-│  • traders          (perfis e estatísticas)                 │
-│  • markets          (mercados e status)                     │
-│  • positions        (posições atuais)                       │
-│  • position_history (histórico de posições)                 │
-│  • bets             (todas as apostas)                      │
-│  • trader_scores    (pontuação insider analysis)            │
+│  • traders          (profiles and statistics)               │
+│  • markets          (markets and status)                    │
+│  • positions        (current positions)                     │
+│  • position_history (position history)                      │
+│  • bets             (all bets)                              │
+│  • trader_scores    (insider analysis scores)               │
 └────────────────────┬────────────────────────────────────────┘
                      │
                      ▼
@@ -76,41 +76,41 @@ Este projeto integra-se com as APIs do Polymarket para coletar, catalogar e anal
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🗄️ Schema do Banco de Dados
+## 🗄️ Database Schema
 
 ### Traders
-- Informações de perfil
-- Estatísticas de performance
-- Timestamp de criação/atualização
+- Profile information
+- Performance statistics
+- Creation/update timestamps
 
 ### Markets
-- Dados do mercado
-- Status (ativo, resolvido, cancelado)
-- Volumes e liquidez
+- Market data
+- Status (active, resolved, canceled)
+- Volume and liquidity
 - Timestamps
 
 ### Positions
-- Posições atuais dos traders
-- Valores investidos
-- Shares detidas
-- Mercado relacionado
+- Current trader positions
+- Invested amounts
+- Shares held
+- Related market
 
 ### Position History
-- Histórico completo de mudanças de posição
-- Snapshot temporal
-- Tracking de entradas/saídas
+- Complete position change history
+- Temporal snapshots
+- Entry/exit tracking
 
 ### Bets
-- Todas as apostas individuais
-- Valores, odds, timestamps
-- Resultados
+- All individual bets
+- Values, odds, timestamps
+- Results
 
 ### Trader Scores (Phase 2)
-- Pontuação de insider trading
-- Métricas de performance
-- Padrões identificados
+- Insider trading score
+- Performance metrics
+- Identified patterns
 
-## 🚀 Tecnologias
+## 🚀 Technologies
 
 - **Runtime**: Python 3.11+
 - **Database**: MySQL 8.0+
@@ -118,52 +118,59 @@ Este projeto integra-se com as APIs do Polymarket para coletar, catalogar e anal
 - **ORM**: SQLAlchemy
 - **Migrations**: Alembic
 - **Async**: asyncio / aiohttp
-- **Containerização**: Docker + Docker Compose
-- **Agendamento**: APScheduler / Celery
+- **Scheduling**: APScheduler / Celery
 - **Testing**: pytest
 - **Environment**: python-dotenv
 
-## 📦 Instalação
+## 📦 Installation
 
 ```bash
-# Clone o repositório
-git clone <repository-url>
+# Clone the repository
+git clone https://github.com/marcosgabbardo/insiderMarket.git
 cd insiderMarket
 
-# Crie ambiente virtual
-python -m venv venv
+# Create virtual environment
+python3 -m venv venv
 source venv/bin/activate  # Linux/Mac
-# ou
+# or
 venv\Scripts\activate  # Windows
 
-# Instale dependências
-pip install -r requirements.txt
+# Install dependencies
+pip3 install -r requirements.txt
 
-# Configure variáveis de ambiente
+# Configure environment variables
 cp .env.example .env
-# Edite .env com suas configurações
+# Edit .env with your MySQL credentials
 
-# Inicie o banco de dados (Docker)
-docker-compose up -d mysql
+# Create database in MySQL
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS polymarket_insider;"
 
-# Execute migrations
+# Run migrations
 alembic upgrade head
 
-# Inicie a aplicação
-python main.py
+# Initialize the application
+python3 -m polymarket_insider init
 ```
 
-## ⚙️ Configuração
+## ⚙️ Configuration
 
-Crie um arquivo `.env` baseado em `.env.example`:
+### Prerequisites
+
+- Python 3.11+
+- MySQL 8.0+ running on localhost:3306
+- pip3
+
+### Environment Setup
+
+Create a `.env` file based on `.env.example`:
 
 ```env
-# Database
+# Database (Local MySQL)
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=polymarket_insider
 DB_USER=root
-DB_PASSWORD=your_password
+DB_PASSWORD=your_mysql_password
 
 # Polymarket API
 POLYMARKET_API_URL=https://gamma-api.polymarket.com
@@ -174,88 +181,173 @@ COLLECTION_INTERVAL_MINUTES=5
 MAX_TRADERS_TO_TRACK=1000
 ```
 
-## 🔄 Uso
+## 🔄 Usage
 
-### Coletar dados de mercados
+### Initialize database
 ```bash
-python -m src.collectors.markets
+python3 -m polymarket_insider init
 ```
 
-### Rastrear traders específicos
+This command will:
+1. **Check database connection** - Verifies MySQL is accessible on localhost:3306
+2. **Create tables** - Runs all SQLAlchemy models to create database schema:
+   - `traders` - Trader profiles and statistics
+   - `markets` - Polymarket markets data
+   - `positions` - Current trader positions
+   - `position_history` - Historical position snapshots
+   - `bets` - Individual bet/trade records
+   - `trader_scores` - Insider analysis scores (Phase 2)
+3. **Display configuration** - Shows current settings (database, API, collection interval)
+4. **Confirm success** - Displays completion message
+
+### Check system status
 ```bash
-python -m src.collectors.traders --addresses <address1>,<address2>
+python3 -m polymarket_insider status
 ```
 
-### Atualizar posições históricas
+Shows connection status for:
+- Database (MySQL connection)
+- API availability (future)
+- Running collectors (future)
+
+### Collect market data
 ```bash
-python -m src.collectors.history
+python3 -m polymarket_insider collect markets --limit 100 --active-only
 ```
 
-### Executar análise de insiders (Phase 2)
+This command will:
+1. Fetch up to 100 active markets from Polymarket API
+2. Save/update market data in MySQL `markets` table
+3. Store: question, category, volume, liquidity, outcomes, prices
+4. Display count of successfully collected markets
+
+**Verify data:**
 ```bash
-python -m src.analysis.insider_detection
+mysql -u root -p polymarket_insider -e "SELECT COUNT(*) FROM markets;"
+mysql -u root -p polymarket_insider -e "SELECT market_id, question, volume FROM markets LIMIT 5;"
 ```
 
-## 📊 Endpoints da API Polymarket
+### Track specific traders
+```bash
+python3 -m polymarket_insider collect traders <address1> <address2> <address3>
+```
 
-### Principais endpoints utilizados:
-- `GET /markets` - Lista de mercados
-- `GET /markets/:id` - Detalhes de mercado específico
-- `GET /markets/:id/positions` - Posições em um mercado
-- `GET /positions/:address` - Posições de um trader
-- `GET /trades` - Histórico de trades
+This command will:
+1. Fetch trader positions from Polymarket API
+2. Save trader profiles in MySQL `traders` table
+3. Store position data in `positions` table
+4. Display count of successfully tracked traders
 
-Documentação completa: https://docs.polymarket.com
+**Example:**
+```bash
+python3 -m polymarket_insider collect traders 0x1234... 0x5678...
+```
 
-## 🔍 Phase 2 - Insider Detection (Planejado)
+### Run insider analysis (Phase 2)
+```bash
+python3 -m polymarket_insider analyze insiders
+```
 
-### Métricas de análise:
-- **Early Entry Score**: Traders que entram antes de movimentos significativos
-- **Timing Accuracy**: Precisão de timing em relação a eventos
-- **Volume Pattern**: Padrões de volume anormais
-- **Win Rate**: Taxa de acerto em mercados específicos
-- **Correlation Analysis**: Correlação entre traders suspeitos
+This feature is planned for Phase 2.
 
-### Algoritmos:
-1. Detecção de clusters temporais
-2. Análise de ordem de entrada
-3. Padrões de volume anormal
+## 🔍 Verifying Collected Data
+
+After collecting data, you can verify it was saved correctly:
+
+### Check markets table
+```bash
+# Count total markets
+mysql -u root -p polymarket_insider -e "SELECT COUNT(*) as total_markets FROM markets;"
+
+# View recent markets with details
+mysql -u root -p polymarket_insider -e "SELECT market_id, question, volume, active FROM markets ORDER BY created_at DESC LIMIT 10;"
+
+# Check active markets only
+mysql -u root -p polymarket_insider -e "SELECT COUNT(*) FROM markets WHERE active = 1;"
+```
+
+### Check traders table
+```bash
+# Count total traders
+mysql -u root -p polymarket_insider -e "SELECT COUNT(*) as total_traders FROM traders;"
+
+# View trader statistics
+mysql -u root -p polymarket_insider -e "SELECT address, total_volume, total_trades FROM traders ORDER BY total_volume DESC LIMIT 10;"
+```
+
+### Check positions table
+```bash
+# View current positions
+mysql -u root -p polymarket_insider -e "SELECT * FROM positions LIMIT 10;"
+```
+
+## 📊 Polymarket API Integration
+
+The application connects to real Polymarket APIs to fetch live data:
+
+### Gamma API (https://gamma-api.polymarket.com)
+- **`GET /markets`** - Fetches active and historical markets ✅ Implemented
+- **`GET /markets/:id`** - Retrieves specific market details
+- **`GET /positions`** - Gets trader positions (by user address)
+- **`GET /trades`** - Fetches trade history
+
+### CLOB API (https://clob.polymarket.com)
+- **`GET /book`** - Order book data (token_id)
+- **`GET /ticker`** - Current ticker prices (token_id)
+
+**All API calls are real HTTP requests** - no mocks or simulations.
+
+Complete API documentation: https://docs.polymarket.com
+
+## 🔍 Phase 2 - Insider Detection (Planned)
+
+### Analysis metrics:
+- **Early Entry Score**: Traders who enter before significant movements
+- **Timing Accuracy**: Timing precision relative to events
+- **Volume Pattern**: Abnormal volume patterns
+- **Win Rate**: Success rate in specific markets
+- **Correlation Analysis**: Correlation between suspicious traders
+
+### Algorithms:
+1. Temporal cluster detection
+2. Entry order analysis
+3. Abnormal volume patterns
 4. Cross-market correlation
 
-## 🎯 Phase 3 - Copy Trading (Planejado)
+## 🎯 Phase 3 - Copy Trading (Planned)
 
 ### Features:
-- Monitoramento em tempo real de traders top-scored
-- Replicação automática de posições
-- Gestão de risco configurable
-- Notificações via Telegram/Discord
-- Stop-loss automático
+- Real-time monitoring of top-scored traders
+- Automatic position replication
+- Configurable risk management
+- Telegram/Discord notifications
+- Automatic stop-loss
 - Portfolio balancing
 
 ## 📈 Roadmap
 
-- [x] Definição de arquitetura
-- [x] Setup inicial do projeto
-- [ ] Implementação do schema MySQL
-- [ ] Cliente API Polymarket
-- [ ] Sistema de coleta de dados
-- [ ] Testes unitários básicos
-- [ ] Docker setup completo
-- [ ] Phase 2: Algoritmos de detecção
-- [ ] Phase 2: Dashboard de análise
+- [x] Architecture definition
+- [x] Initial project setup
+- [x] MySQL schema implementation
+- [x] Polymarket API client
+- [x] Data collection system
+- [x] CLI interface
+- [ ] Unit tests
+- [ ] Phase 2: Detection algorithms
+- [ ] Phase 2: Analysis dashboard
 - [ ] Phase 3: Wallet integration
 - [ ] Phase 3: Copy trading engine
 
-## 🤝 Contribuição
+## 🤝 Contributing
 
-Este é um projeto privado. Para contribuir, entre em contato com o administrador.
+This is a private project. To contribute, please contact the administrator.
 
 ## ⚠️ Disclaimer
 
-Este software é fornecido para fins educacionais e de pesquisa. O uso de estratégias de copy trading envolve riscos financeiros significativos. Use por sua própria conta e risco.
+This software is provided for educational and research purposes only. Using copy trading strategies involves significant financial risks. Use at your own risk.
 
-**IMPORTANTE**: A identificação de "insider trading" é baseada em análise estatística e padrões, não constituindo prova legal de atividade ilícita.
+**IMPORTANT**: The identification of "insider trading" is based on statistical analysis and patterns, and does not constitute legal proof of illicit activity.
 
-## 📄 Licença
+## 📄 License
 
-Proprietary - Todos os direitos reservados
+Proprietary - All rights reserved
