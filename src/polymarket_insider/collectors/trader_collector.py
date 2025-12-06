@@ -57,6 +57,9 @@ class TraderCollector:
             self._collect_trades_and_stats(trader)
             self._collect_activities(trader, market_ids)
 
+            # Fix positions that don't have market_id using activities
+            self._fix_positions_market_id(trader)
+
             # Note: Username is not available via public API
             # It would need to be scraped from the Polymarket website
             # or obtained through a different method
@@ -65,10 +68,10 @@ class TraderCollector:
             self.db.commit()
 
             # Collect markets that the trader is involved in
-            # Now using positions directly to get accurate market data
-            if collect_markets and market_ids:
-                logger.info(f"Auto-collecting {len(market_ids)} markets for trader", address=address)
-                self._collect_trader_markets_from_positions(trader)
+            # Now using positions and activities to get accurate market data
+            if collect_markets:
+                logger.info(f"Auto-collecting markets for trader", address=address)
+                self._collect_trader_markets_from_positions_and_activities(trader)
 
             return trader
 
@@ -91,41 +94,47 @@ class TraderCollector:
         market_ids = set()
 
         try:
-            # Fetch detailed positions from Data API
-            positions_data = self.api.get_user_positions_detailed(
-                address=address,
-                limit=500,
-                size_threshold=0.01,  # Include small positions
-            )
-
-            logger.info(f"Found {len(positions_data)} positions", address=address)
-
-            # Store each position
-            for pos_data in positions_data:
-                market_id = pos_data.get("condition_id")
-                if market_id:
-                    market_ids.add(market_id)
-
-                # Check if position already exists
-                position = (
-                    self.db.query(Position)
-                    .filter(
-                        Position.trader_id == trader.id,
-                        Position.market_id == market_id,
-                        Position.outcome == pos_data.get("outcome"),
-                    )
-                    .first()
+            # Try to fetch detailed positions from Data API
+            try:
+                positions_data = self.api.get_user_positions_detailed(
+                    address=address,
+                    limit=500,
+                    size_threshold=0.01,  # Include small positions
                 )
 
-                if position:
-                    # Update existing position
-                    self._update_position(position, pos_data)
-                else:
-                    # Create new position
-                    position = self._create_position(trader.id, pos_data)
-                    self.db.add(position)
+                logger.info(f"Found {len(positions_data)} positions from Data API", address=address)
 
-            return market_ids
+                # Store each position
+                for pos_data in positions_data:
+                    market_id = pos_data.get("condition_id") or pos_data.get("conditionId")
+                    if market_id:
+                        market_ids.add(market_id)
+
+                    # Check if position already exists
+                    position = (
+                        self.db.query(Position)
+                        .filter(
+                            Position.trader_id == trader.id,
+                            Position.market_id == market_id,
+                            Position.outcome == pos_data.get("outcome"),
+                        )
+                        .first()
+                    )
+
+                    if position:
+                        # Update existing position
+                        self._update_position(position, pos_data)
+                    else:
+                        # Create new position
+                        position = self._create_position(trader.id, pos_data)
+                        self.db.add(position)
+
+                return market_ids
+
+            except Exception as e:
+                # Data API failed, try to build positions from trades
+                logger.warning(f"Data API failed, using trades to build positions", address=address, error=str(e))
+                return self._build_positions_from_trades(trader)
 
         except Exception as e:
             # 404 means trader has no positions, which is valid
@@ -135,6 +144,117 @@ class TraderCollector:
             else:
                 raise
 
+    def _build_positions_from_trades(self, trader: Trader) -> Set[str]:
+        """
+        Build positions from trades when positions API is not available
+
+        Args:
+            trader: Trader model instance
+
+        Returns:
+            Set of market IDs from trades
+        """
+        address = trader.address
+        market_ids = set()
+
+        try:
+            # Fetch all trades
+            all_trades = []
+            offset = 0
+            limit = 500
+
+            while True:
+                trades = self.api.get_user_trades(address=address, limit=limit, offset=offset)
+                if not trades:
+                    break
+                all_trades.extend(trades)
+
+                if len(trades) < limit:
+                    break
+
+                offset += limit
+
+            logger.info(f"Found {len(all_trades)} trades to build positions", address=address)
+
+            # Group trades by market and outcome
+            positions_map = {}
+            for trade in all_trades:
+                market_id = trade.get("conditionId") or trade.get("condition_id")
+                outcome = trade.get("outcome")
+
+                if not market_id or not outcome:
+                    continue
+
+                market_ids.add(market_id)
+                key = (market_id, outcome)
+
+                if key not in positions_map:
+                    positions_map[key] = {
+                        "market_id": market_id,
+                        "outcome": outcome,
+                        "total_shares": 0,
+                        "total_invested": 0,
+                        "trade_count": 0,
+                    }
+
+                # Aggregate trade data
+                side = trade.get("side")
+                shares = abs(float(trade.get("sharesAmount", 0) or trade.get("size", 0)))
+                cash = abs(float(trade.get("cashAmount", 0)))
+
+                if side == "BUY":
+                    positions_map[key]["total_shares"] += shares
+                    positions_map[key]["total_invested"] += cash
+                elif side == "SELL":
+                    positions_map[key]["total_shares"] -= shares
+                    # Don't subtract from invested on sells
+
+                positions_map[key]["trade_count"] += 1
+
+            # Create or update positions from aggregated data
+            for (market_id, outcome), pos_data in positions_map.items():
+                # Only create position if there are shares remaining
+                if pos_data["total_shares"] > 0.01:
+                    position = (
+                        self.db.query(Position)
+                        .filter(
+                            Position.trader_id == trader.id,
+                            Position.market_id == market_id,
+                            Position.outcome == outcome,
+                        )
+                        .first()
+                    )
+
+                    if position:
+                        # Update existing position
+                        position.size = pos_data["total_shares"]
+                        position.shares = pos_data["total_shares"]
+                        position.initial_value = pos_data["total_invested"]
+                        position.invested_amount = pos_data["total_invested"]
+                        if pos_data["total_shares"] > 0:
+                            position.avg_entry_price = pos_data["total_invested"] / pos_data["total_shares"]
+                    else:
+                        # Create new position
+                        avg_price = pos_data["total_invested"] / pos_data["total_shares"] if pos_data["total_shares"] > 0 else 0
+                        position = Position(
+                            trader_id=trader.id,
+                            market_id=market_id,
+                            outcome=outcome,
+                            size=pos_data["total_shares"],
+                            shares=pos_data["total_shares"],
+                            initial_value=pos_data["total_invested"],
+                            invested_amount=pos_data["total_invested"],
+                            avg_entry_price=avg_price,
+                        )
+                        self.db.add(position)
+
+            logger.info(f"Built {len(positions_map)} positions from trades", address=address)
+            return market_ids
+
+        except Exception as e:
+            logger.error(f"Failed to build positions from trades", address=address, error=str(e))
+            return set()
+
     def _create_position(self, trader_id: int, data: Dict[str, Any]) -> Position:
         """Create a new position from API data"""
         size_value = float(data.get("size", 0))
@@ -142,7 +262,7 @@ class TraderCollector:
 
         return Position(
             trader_id=trader_id,
-            market_id=data.get("condition_id"),
+            market_id=data.get("condition_id") or data.get("conditionId"),
             outcome=data.get("outcome"),
             size=size_value,
             shares=size_value,  # Keep both in sync
@@ -377,6 +497,126 @@ class TraderCollector:
             realized_pnl=float(data.get("realizedPnl", 0)) if data.get("realizedPnl") else None,
             activity_metadata=json.dumps(data) if data else None,  # Store full data for reference
         )
+
+    def _fix_positions_market_id(self, trader: Trader) -> None:
+        """
+        Fix positions that don't have market_id by looking up from activities
+
+        Args:
+            trader: Trader model instance
+        """
+        try:
+            # Get positions without market_id
+            positions_without_market = (
+                self.db.query(Position)
+                .filter(
+                    Position.trader_id == trader.id,
+                    Position.market_id.is_(None)
+                )
+                .all()
+            )
+
+            if not positions_without_market:
+                logger.debug(f"All positions have market_id", trader_id=trader.id)
+                return
+
+            logger.info(f"Found {len(positions_without_market)} positions without market_id", trader_id=trader.id)
+
+            # Get all activities for this trader
+            activities = (
+                self.db.query(Activity)
+                .filter(Activity.trader_id == trader.id)
+                .all()
+            )
+
+            # Build a map of outcome -> market_id from activities
+            outcome_to_market = {}
+            for activity in activities:
+                if activity.outcome and activity.market_id:
+                    outcome_to_market[activity.outcome] = activity.market_id
+
+            # Fix positions using activity data
+            fixed_count = 0
+            for position in positions_without_market:
+                if position.outcome in outcome_to_market:
+                    position.market_id = outcome_to_market[position.outcome]
+                    fixed_count += 1
+                    logger.debug(f"Fixed position market_id", outcome=position.outcome, market_id=position.market_id)
+
+            if fixed_count > 0:
+                logger.info(f"Fixed {fixed_count} positions with market_id from activities", trader_id=trader.id)
+
+        except Exception as e:
+            logger.warning(f"Failed to fix positions market_id", trader_id=trader.id, error=str(e))
+
+    def _collect_trader_markets_from_positions_and_activities(self, trader: Trader) -> None:
+        """
+        Collect markets from both positions and activities
+
+        Args:
+            trader: Trader model instance
+        """
+        from .market_collector import MarketCollector
+
+        try:
+            # Collect unique market_ids from positions
+            positions = self.db.query(Position).filter(Position.trader_id == trader.id).all()
+            position_market_ids = {p.market_id for p in positions if p.market_id}
+
+            # Collect unique market_ids from activities
+            activities = self.db.query(Activity).filter(Activity.trader_id == trader.id).all()
+            activity_market_ids = {a.market_id for a in activities if a.market_id}
+
+            # Combine both sets
+            all_market_ids = position_market_ids | activity_market_ids
+
+            if not all_market_ids:
+                logger.info(f"No market IDs found in positions or activities", trader_address=trader.address)
+                return
+
+            logger.info(
+                f"Found {len(all_market_ids)} unique markets ({len(position_market_ids)} from positions, {len(activity_market_ids)} from activities)",
+                trader_address=trader.address
+            )
+
+            # Collect markets
+            collector = MarketCollector(self.api, self.db)
+            collected_count = 0
+
+            for market_id in all_market_ids:
+                try:
+                    # Check if market already exists by condition_id
+                    existing = self.db.query(Market).filter(Market.condition_id == market_id).first()
+                    if existing:
+                        logger.debug(f"Market already exists", condition_id=market_id)
+                        continue
+
+                    # Try to fetch market using condition_id
+                    try:
+                        market_data = self.api.get_market(market_id)
+                        collector._store_market(market_data)
+                        collected_count += 1
+                        logger.debug(f"Collected market", condition_id=market_id)
+                    except Exception as api_error:
+                        logger.debug(
+                            f"Could not fetch market by condition_id",
+                            condition_id=market_id,
+                            error=str(api_error)
+                        )
+                        continue
+
+                except Exception as e:
+                    logger.warning(f"Failed to collect market", market_id=market_id, error=str(e))
+                    continue
+
+            if collected_count > 0:
+                self.db.commit()
+                logger.info(f"Auto-collected {collected_count} new markets", trader_address=trader.address)
+            else:
+                logger.info(f"No new markets to collect", trader_address=trader.address)
+
+        except Exception as e:
+            logger.error(f"Failed to collect markets from positions and activities", error=str(e))
 
     def _collect_trader_markets_from_positions(self, trader: Trader) -> None:
         """
